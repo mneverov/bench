@@ -3,8 +3,9 @@
 With [ILP](https://en.wikipedia.org/wiki/Instruction-level_parallelism) processors should be able to run independent
 instructions simultaneously.
 
-Function `IncrementDependentValues` increments the same element of an array `a[0]` `numIter` times, hence the
-expectation is it should be slower than `IncrementIndependentValues` that does the same, but with independent elements.
+Function [IncrementDependentValues](ilp.go#L3) increments the same element of an array `a[0]` `numIter` times, hence
+the expectation is it should be slower than [IncrementIndependentValues](ilp.go#L15) that does the same, but with
+independent elements.
 Benchmark shows that it is not true:
 
 ```sh
