@@ -1,7 +1,7 @@
 # Instruction Level Parallelism
 
 With [ILP](https://en.wikipedia.org/wiki/Instruction-level_parallelism) processors should be able to run independent
-instructions simultaneously.
+instructions simultaneously. I did tests on a laptop with 8 cores.
 
 Function [IncrementDependentValues](ilp.go#L3) increments the same element of an array `a[0]` `numIter` times, hence
 the expectation is it should be slower than [IncrementIndependentValues](ilp.go#L15) that does the same, but with
@@ -50,10 +50,7 @@ Looks good (except 🤷 part). Run tests again with the disabled optimizations:
 
 ```sh
 go test -gcflags='-N -l' -test.bench BenchmarkIncrementInOrDependentValues -test.trace=trace.out ./ilp/...
-goos: linux
-goarch: amd64
-pkg: github.com/mneverov/bench/ilp
-cpu: 11th Gen Intel(R) Core(TM) i7-11850H @ 2.50GHz
+
 BenchmarkIncrementInOrDependentValues/increment_independent_values-16                  3         418164019 ns/op
 BenchmarkIncrementInOrDependentValues/increment_dependent_values-16                    3         388270575 ns/op
 PASS
@@ -71,11 +68,8 @@ code for `IncrementDependentValues` -- same as for go `v1.23`.
 Benchmark results:
 
 ```sh
-$ go1.21.13 test -test.bench BenchmarkIncrementInOrDependentValues -test.trace=trace.out ./ilp/...
-goos: linux
-goarch: amd64
-pkg: github.com/mneverov/bench/ilp
-cpu: 11th Gen Intel(R) Core(TM) i7-11850H @ 2.50GHz
+go1.21.13 test -test.bench BenchmarkIncrementInOrDependentValues -test.trace=trace.out ./ilp/...
+
 BenchmarkIncrementInOrDependentValues/increment_independent_values-16                  3         453596262 ns/op
 BenchmarkIncrementInOrDependentValues/increment_dependent_values-16                   10         106690406 ns/op
 PASS
@@ -89,10 +83,7 @@ Ok, the last attempt. Let's bench deoptimized `v1.21` version:
 
 ```sh
 $ go1.21.13 test -gcflags='-N -l' -test.bench BenchmarkIncrementInOrDependentValues -test.trace=trace.out ./ilp/...
-goos: linux
-goarch: amd64
-pkg: github.com/mneverov/bench/ilp
-cpu: 11th Gen Intel(R) Core(TM) i7-11850H @ 2.50GHz
+
 BenchmarkIncrementInOrDependentValues/increment_independent_values-16                  3         407690240 ns/op
 BenchmarkIncrementInOrDependentValues/increment_dependent_values-16                    3         393600451 ns/op
 PASS
@@ -100,3 +91,27 @@ ok      github.com/mneverov/bench/ilp   4.887s
 ```
 
 Now incrementing dependent values is still faster and also as fast as optimized go `v1.23`.
+
+## 🤦
+
+Let's increase number of instructions to 4 and 8 (see `Increment4...` and `Increment8...`) functions. The expectation is
+that not optimized code will have more instructions (and it does) and now it should be slower. Bench results:
+
+```sh
+go test -gcflags='-N -l' -test.bench BenchmarkIncrement4InOrDependentValues -test.trace=trace.out ./ilp/...
+
+BenchmarkIncrement4InOrDependentValues/increment_independent_values-16                 3         452723877 ns/op
+BenchmarkIncrement4InOrDependentValues/increment_dependent_values-16                   3         461040070 ns/op
+PASS
+ok      github.com/mneverov/bench/ilp   5.453s
+
+go test -gcflags='-N -l' -test.bench BenchmarkIncrement8InOrDependentValues -test.trace=trace.out ./ilp/...
+
+BenchmarkIncrement8InOrDependentValues/increment_independent_values-16                 2         554403639 ns/op
+BenchmarkIncrement8InOrDependentValues/increment_dependent_values-16                   3         471760913 ns/op
+PASS
+ok      github.com/mneverov/bench/ilp   4.525s
+```
+
+I.e. incrementing `a[0]` 4 times is slower than incrementing independent `a[0]-a[3]` (finally), but incrementing `a[0]`
+8 times is faster again.
